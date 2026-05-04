@@ -1,8 +1,7 @@
 import { useMemo, useRef, useState } from "react";
-import { formatMoney, parseMoney } from "../../../shared/utils/money";
 import type { ChangeEvent, KeyboardEvent } from "react";
 
-type Props = {
+interface Props {
   label: string;
   value: number;
   onChange: (n: number) => void;
@@ -11,11 +10,11 @@ type Props = {
   id?: string;
   error?: string;
   maxlength?: number;
+  suffix?: string;
   autocomplete?: string;
-  children?: React.ReactNode;
-};
+}
 
-export function MoneyInput({
+export function EnergyInput({
   label,
   value,
   onChange,
@@ -23,55 +22,41 @@ export function MoneyInput({
   required = false,
   id,
   error,
-  maxlength = 20,
+  maxlength = 10,
   autocomplete = "off",
-  children,
+  suffix = "kW",
 }: Props) {
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editingText, setEditingText] = useState<string>("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingText, setEditingText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Memoizar el texto formateado
-  const formattedValue = useMemo(() => formatMoney(value), [value]);
+  const displayText = isEditing ? editingText : value.toString();
 
-  // ✅ Texto visible derivado (sin estado duplicado)
-  const displayText = isEditing ? editingText : formattedValue;
-
-  // ✅ Regex simple: números
   const sanitizeRegex = useMemo(() => /[^0-9]/g, []);
-
-  // ✅ Sanitizar input
   const sanitizeRaw = (rawText: string): string =>
     rawText.replace(sanitizeRegex, "");
 
-  // ✅ Commit final (blur)
   const commitValue = (rawText: string): void => {
     const raw = sanitizeRaw(rawText);
-    const numeric = parseMoney(raw);
-    onChange(numeric);
+    onChange(raw === "" ? 0 : Number(raw));
   };
 
-  // ✅ Cambio en vivo
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const raw = sanitizeRaw(e.target.value);
     setEditingText(raw);
-
-    onChange(parseMoney(raw));
+    onChange(raw === "" ? 0 : Number(raw));
   };
 
-  // ✅ Focus: iniciar edición sin formato
   const handleFocus = (): void => {
     setIsEditing(true);
-    setEditingText(value.toString());
+    setEditingText(value ? value.toString() : "");
   };
 
-  // ✅ Blur: finalizar edición
   const handleBlur = (): void => {
     setIsEditing(false);
     commitValue(editingText);
   };
 
-  // ✅ Control de teclado
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.ctrlKey || e.metaKey) return;
 
@@ -84,14 +69,17 @@ export function MoneyInput({
       "End",
       "Tab",
     ];
-
     const isNumber = /^[0-9]$/.test(e.key);
     const isAllowed = allowedKeys.includes(e.key);
 
-    if (!isNumber && !isAllowed) {
-      e.preventDefault();
-    }
+    if (!isNumber && !isAllowed) e.preventDefault();
   };
+
+  const borderClass = error ? "border-red-500" : "border-gray-300";
+  const focusRingClass = disabled
+    ? ""
+    : "focus-within:ring-2 focus-within:ring-gray-100";
+  const bgClass = disabled ? "bg-gray-100" : "bg-white";
 
   return (
     <div className="flex flex-col gap-1">
@@ -100,28 +88,16 @@ export function MoneyInput({
         {required && <span className="text-red-600 ml-1">*</span>}
       </label>
 
-      {children}
-
       <div
-        className={`
-          flex items-center rounded-md border
-          ${error ? "border-red-500" : "border-gray-300"}
-          ${
-            disabled
-              ? "bg-gray-100"
-              : "bg-white focus-within:ring-2 focus-within:ring-gray-100"
-          }
-        `}
+        className={[
+          "grid grid-cols-[1fr_auto] items-stretch",
+          "h-10 rounded-md border",
+          borderClass,
+          bgClass,
+          focusRingClass,
+          disabled ? "cursor-not-allowed" : "",
+        ].join(" ")}
       >
-        <span
-          className={`px-3 select-none ${
-            disabled ? "text-gray-600" : "text-black"
-          }`}
-          aria-hidden="true"
-        >
-          $
-        </span>
-
         <input
           ref={inputRef}
           id={id}
@@ -131,7 +107,11 @@ export function MoneyInput({
           autoComplete={autocomplete}
           disabled={disabled}
           inputMode="numeric"
-          className="w-full bg-transparent px-2 py-2 text-left text-base outline-none font-mono disabled:text-gray-600 disabled:cursor-not-allowed text-gray-900"
+          className={[
+            "w-full h-full bg-transparent",
+            "px-3 py-2 text-left text-base outline-none font-mono",
+            disabled ? "text-gray-600" : "text-gray-900",
+          ].join(" ")}
           onFocus={handleFocus}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -139,6 +119,23 @@ export function MoneyInput({
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
         />
+
+        {suffix && (
+          <div
+            className={[
+              "h-full flex items-center",
+              "px-3 text-sm font-medium whitespace-nowrap select-none",
+              "border-l",
+              error ? "border-red-300" : "border-gray-200",
+              disabled ? "text-gray-500" : "text-gray-600",
+              disabled ? "bg-gray-100" : "bg-gray-50",
+              "rounded-r-md",
+            ].join(" ")}
+            aria-hidden="true"
+          >
+            {suffix}
+          </div>
+        )}
       </div>
 
       {error && (

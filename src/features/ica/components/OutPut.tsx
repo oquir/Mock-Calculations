@@ -1,6 +1,4 @@
-import { useMemo, useRef } from "react";
-import { type ClipboardEvent } from "react";
-import { formatMoney } from "../../../shared/utils/money";
+import { useRef } from "react";
 
 interface Props {
   label: string;
@@ -10,25 +8,26 @@ interface Props {
   prefix?: string;
   suffix?: string;
   className?: string;
-  children?: React.ReactNode;
+  showRadioButtons?: boolean;
+  radioLabel?: string;
+  selectedValue?: "Si" | "No";
+  onValueChange?: (value: "Si" | "No") => void;
 }
 
-export function MoneyOutput({
+export function Output({
   label,
   value,
   id,
   error,
-  prefix = "$",
+  prefix = "",
   suffix,
   className = "",
-  children
+  showRadioButtons = false,
+  radioLabel,
+  selectedValue,
+  onValueChange,
 }: Props) {
-  const formattedValue = useMemo(() => formatMoney(value), [value]);
   const outputRef = useRef<HTMLOutputElement>(null);
-  const handleCopy = (event: ClipboardEvent<HTMLOutputElement>) => {
-    event.preventDefault();
-    event.clipboardData.setData("text/plain", value.toString());
-  };
 
   return (
     <div className="flex flex-col gap-1">
@@ -36,7 +35,37 @@ export function MoneyOutput({
         {label}
       </label>
 
-      {children}
+      {showRadioButtons && radioLabel && (
+        <div className="mt-2">
+          <label className="text-sm font-medium text-gray-700 block mb-2">
+            {radioLabel}
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name={`${id}-radio`}
+                value="Si"
+                checked={selectedValue === "Si"}
+                onChange={() => onValueChange?.("Si")}
+                className="w-4 h-4 text-blue-600 cursor-pointer"
+              />
+              <span className="ml-2 text-sm text-gray-700">Si</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name={`${id}-radio`}
+                value="No"
+                checked={selectedValue === "No"}
+                onChange={() => onValueChange?.("No")}
+                className="w-4 h-4 text-blue-600 cursor-pointer"
+              />
+              <span className="ml-2 text-sm text-gray-700">No</span>
+            </label>
+          </div>
+        </div>
+      )}
 
       <div
         className={`
@@ -67,9 +96,8 @@ export function MoneyOutput({
           aria-describedby={error ? `${id}-error` : undefined}
           role="textbox"
           aria-readonly="true"
-          onCopy={handleCopy}
         >
-          {formattedValue}
+          {value}
         </output>
 
         {/* Suffix */}
