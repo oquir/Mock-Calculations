@@ -1,5 +1,4 @@
 export function parseMoney(input: string): number {
-  // Solo admite dígitos y signo; elimina separadores
   const cleaned = input.replace(/[^\d-]/g, "");
   if (!cleaned || cleaned === "-") return 0;
   const n = Number(cleaned);
