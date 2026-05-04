@@ -1,10 +1,14 @@
 import { Providers } from "./providers";
-import IcaPage from "../features/ica/IcaPage";
+import { DeclaracionFlowProvider, DeclaracionFlowModals } from "./context/declaracion-flow";
+import IcaPage from "../features/ica/pages";
 
 export default function App() {
   return (
     <Providers>
-      <IcaPage />
+      <DeclaracionFlowProvider>
+        <DeclaracionFlowModals />
+        <IcaPage />
+      </DeclaracionFlowProvider>
     </Providers>
   );
 }
