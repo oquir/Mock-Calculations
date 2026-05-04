@@ -25,21 +25,21 @@ const calcR16 = (d: DetalleDeclaracion): DetalleDeclaracion => {
 };
 
 const calcActividades = (acts: ActividadRow[]) => {
-  let totalIngreso = 0;
-  let totalImpuesto = 0;
+  return acts.reduce(
+    (acc, a) => {
+      const ingresos = a.ingresosGravados || 0;
+      const tarifa = a.tarifaXMil || 0;
+      const impuesto =
+        ingresos > 0 ? roundTo1000((ingresos * tarifa) / 1000) : 0;
 
-  const next = acts.map((a) => {
-    const ingresos = a.ingresosGravados || 0;
-    const tarifa = a.tarifaXMil || 0;
-    const impuesto = ingresos > 0 ? roundTo1000((ingresos * tarifa) / 1000) : 0;
+      acc.next.push({ ...a, impuesto });
+      acc.totalIngreso += ingresos;
+      acc.totalImpuesto += impuesto;
 
-    totalIngreso += ingresos;
-    totalImpuesto += impuesto;
-
-    return { ...a, impuesto };
-  });
-
-  return { next, totalIngreso, totalImpuesto };
+      return acc;
+    },
+    { next: [] as ActividadRow[], totalIngreso: 0, totalImpuesto: 0 },
+  );
 };
 
 const calcImpuestoLey56 = (params: {
@@ -150,14 +150,16 @@ const calcInteresMora = (params: {
   tasaMensual: number; // configurable
 }): number => {
   const { valorPagar, fechaMaxima, now, tasaMensual } = params;
-  const diffMs = now.getTime() - fechaMaxima.getTime();
-  const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (dias <= 0) return 0;
+  const dias = Math.max(
+    Math.floor((now.getTime() - fechaMaxima.getTime()) / 86400000),
+    0,
+  );
 
-  // Ojo: tu fórmula actual divide por 366; aquí lo dejamos igual (se puede ajustar)
-  const tasaDiaria = Number((tasaMensual / 366).toFixed(7));
-  const interes = (valorPagar * tasaDiaria * dias) / 100;
+  if (dias === 0) return 0;
+
+  const interes = (valorPagar * (tasaMensual / 100) * dias) / 366;
+
   return ceilTo1000(interes);
 };
 
